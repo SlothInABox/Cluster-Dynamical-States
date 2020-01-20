@@ -12,6 +12,16 @@ To do:
 """
 
 
+
+def read_data(path):
+    """Function to read in data
+
+    Reads in files located in the 'dat' folder. Determines redshift from the
+    filename.
+
+    """
+    pass
+
 def main():
     pass
 
