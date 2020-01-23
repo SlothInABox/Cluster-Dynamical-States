@@ -85,11 +85,11 @@ def test_plot(test_data):
         test_data (array): A numpy array of the data for a particular redshift.
 
     """
-    x = test_data[:, 4]
+    x = test_data[:, 3]
     y = test_data[:, 5]
-    plt.figure(0)
+    plt.figure('TEST DATA')
     plt.scatter(x, y, c='black', s=0.5)
-    plt.xlabel('R200: delta')
+    plt.xlabel('R200: eta')
     plt.ylabel('R200: fm')
     plt.show()
 
