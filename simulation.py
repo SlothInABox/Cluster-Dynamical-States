@@ -68,10 +68,14 @@ def read_data(path):
                 redshift = row[2]
         #: ClusterSnap: object containing data inside file and redshift value.
         entry_data = ClusterSnap(np.loadtxt(path + entry, delimiter=' '), redshift)
-        #: np array: array of locations of NaN values
-        where_are_NaNs = np.isnan(entry_data.data)
-        entry_data.data[where_are_NaNs] = 0.0
-        entry_data.data[entry_data.data < 0.0] = 0.0
+        # entry_data.data = entry_data.data[entry_data.data[:,1] > 0.0]
+        # entry_data.data = entry_data.data[~np.isnan(entry_data.data).any(axis=1)]
+        entry_data.data = entry_data.data[
+            np.logical_and(
+                entry_data.data[:,1]>0.0,
+                ~np.isnan(entry_data.data).any(axis=1)
+            )
+        ]
         input_data.append(entry_data)
     print()
     return input_data
@@ -85,7 +89,7 @@ def test_plot(test_data):
         test_data (array): A numpy array of the data for a particular redshift.
 
     """
-    x = test_data[:, 3]
+    x = np.abs(test_data[:, 3] - 1)
     y = test_data[:, 5]
     plt.figure('TEST DATA')
     plt.scatter(x, y, c='black', s=0.5)
