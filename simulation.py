@@ -68,8 +68,6 @@ def read_data(path):
                 redshift = row[2]
         #: ClusterSnap: object containing data inside file and redshift value.
         entry_data = ClusterSnap(np.loadtxt(path + entry, delimiter=' '), redshift)
-        # entry_data.data = entry_data.data[entry_data.data[:,1] > 0.0]
-        # entry_data.data = entry_data.data[~np.isnan(entry_data.data).any(axis=1)]
         entry_data.data = entry_data.data[
             np.logical_and(
                 entry_data.data[:,1]>0.0,
@@ -80,21 +78,32 @@ def read_data(path):
     print()
     return input_data
 
-def test_plot(test_data):
-    """Method to test input data and get a plot.
+def make_plots(input_snap):
+    """Method for making plots of a data file.
 
-    Uses test data (redshift value 1) and attempts to plot.
+    Uses a ClusterSnap object to create plots of eta against delta and fm.
+    Currently uses the R200 data columns.
+    Straight line of best fit is plotted using the numpy.polyfit function.
 
     Args:
-        test_data (array): A numpy array of the data for a particular redshift.
+        input_snap (ClusterSnap): Object chosen for plotting.
 
     """
-    x = np.abs(test_data[:, 3] - 1)
-    y = test_data[:, 5]
-    plt.figure('TEST DATA')
-    plt.scatter(x, y, c='black', s=0.5)
-    plt.xlabel('R200: eta')
-    plt.ylabel('R200: fm')
+    #: figure, axis: generated figure and axis with matplotlib
+    fig, axs = plt.subplots(1,2)
+    fig.suptitle('Red shift: ' + str(input_snap.r_shift))
+    x = np.abs(input_snap.data[:,3] - 1)
+    for i in range(0, 2):
+        #: np arrays: polyfitted y values for creating straight line
+        y, m = np.polynomial.polynomial.polyfit(x, input_snap.data[:,4+i], 1)
+        axs[i].scatter(x, input_snap.data[:,4+i],c='black',s=0.5)
+        axs[i].plot(x, y + m * x, c='red', alpha=0.5)
+        axs[i].set(xlabel='R200: abs(eta-1)')
+        if i == 0:
+            axs[i].set(ylabel='R200: delta')
+        elif i == 1:
+            axs[i].set(ylabel='R200: fm')
+    fig.savefig('plots/abs(eta-1)_'+ str(input_snap.r_shift) + '_plot.png')
     plt.show()
 
 def main():
@@ -109,7 +118,7 @@ def main():
     target_redshift = .0
     for target in input_data:
         if target.r_shift == target_redshift:
-            test_plot(target.data)
+            make_plots(target)
 
 if __name__ == '__main__':
     main()
