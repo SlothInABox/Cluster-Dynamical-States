@@ -95,12 +95,12 @@ def make_plots(input_snap):
     x = np.abs(input_snap.data[:,3] - 1)
     for i in range(0, 2):
         #: np arrays: polyfitted y values for creating straight line
-        y, m = np.polynomial.polynomial.polyfit(x, input_snap.data[:,4+i], 1)
-        axs[i].scatter(x, input_snap.data[:,4+i],c='black',s=0.5)
-        axs[i].plot(x, y + m * x, c='red', alpha=0.5)
-        axs[i].set(xlabel='R200: abs(eta-1)')
+        y = np.poly1d(np.polynomial.polynomial.polyfit(x, input_snap.data[:,4+i], 1))
+        axs[i].plot(x, input_snap.data[:,4+i],'o', color='black', markersize=0.75)
+        axs[i].plot(x, y(x), c='red', alpha=0.5)
+        axs[i].set(xlabel='R200: |$\eta$-1|')
         if i == 0:
-            axs[i].set(ylabel='R200: delta')
+            axs[i].set(ylabel='R200: $\delta$')
         elif i == 1:
             axs[i].set(ylabel='R200: fm')
     fig.savefig('plots/abs(eta-1)_'+ str(input_snap.r_shift) + '_plot.png')
