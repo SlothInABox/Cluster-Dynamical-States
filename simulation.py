@@ -49,19 +49,19 @@ def read_data(path):
         input_data (list): A list of input ClusterData objects.
 
     """
-    #:  list: list of the data stored
+    #:  list: list of the data stored.
     input_data = []
-    #:  list of str: files and directories in path
+    #:  list of str: files and directories in path.
     entries = os.listdir(path)
-    #:  np array: list of redshift data and snapnums
+    #:  np array: list of redshift data and snapnums.
     redshift_data = np.loadtxt('redshifts.txt', delimiter=' ')
     redshift_data[redshift_data < 0.0] = 0.0
 
     for entry in entries:
         print('---Reading: ' + entry + '---', end='\r')
-        #:  int: gets snapnum from filename
+        #:  int: gets snapnum from filename.
         snap_num = int(entry.split('_')[3])
-        #: flt: true redshift value of the file
+        #: flt: true redshift value of the file.
         redshift = .0
         for row in redshift_data:
             if int(row[0]) == snap_num:
@@ -89,22 +89,51 @@ def make_plots(input_snap):
         input_snap (ClusterSnap): Object chosen for plotting.
 
     """
-    #: figure, axis: generated figure and axis with matplotlib
-    fig, axs = plt.subplots(1,2)
-    fig.suptitle('Red shift: ' + str(input_snap.r_shift))
-    x = np.abs(input_snap.data[:,3] - 1)
-    for i in range(0, 2):
-        #: np arrays: polyfitted y values for creating straight line
-        y = np.poly1d(np.polynomial.polynomial.polyfit(x, input_snap.data[:,4+i], 1))
-        axs[i].plot(x, input_snap.data[:,4+i],'o', color='black', markersize=0.75)
-        axs[i].plot(x, y(x), c='red', alpha=0.5)
-        axs[i].set(xlabel='R200: |$\eta$-1|')
-        if i == 0:
-            axs[i].set(ylabel='R200: $\delta$')
-        elif i == 1:
-            axs[i].set(ylabel='R200: fm')
-    fig.savefig('plots/abs(eta-1)_'+ str(input_snap.r_shift) + '_plot.png')
-    plt.show()
+    #: dict of ndarrays: data columns with column title as the key.
+    vals = {
+        'fm' : input_snap.data[:,5],
+        '$\delta$' : input_snap.data[:,4],
+        '$\eta$' : input_snap.data[:,3],
+        '|$\eta$-1|' : np.abs(input_snap.data[:,3]-1)
+    }
+    #: list of tuples: plot values. First is x, second is y.
+    plots = [
+        ('fm', '$\delta$'),
+        ('$\eta$', 'fm'),
+        ('$\eta$', '$\delta$'),
+        ('|$\eta$-1|', 'fm'),
+        ('|$\eta$-1|', '$\delta$')
+    ]
+    fig, ax = plt.subplots()
+    ax.set_autoscale_on(True)
+    ax.autoscale_view(True, True, True)
+    #: initialise plots. Allows use of 'set_data' later on to reduce code load.
+    scatter, = ax.plot(
+        vals['fm'],
+        vals['fm'],
+        'o',
+        c='black',
+        markersize=0.75
+    )
+    line, = ax.plot(
+        vals['fm'],
+        np.poly1d(np.polyfit(vals['fm'], vals['fm'], 1))(vals['fm']),
+        c='red',
+        alpha=0.5
+    )
+    plt.draw()
+    for plot in plots:
+        x, y = vals[plot[0]], vals[plot[1]]
+        scatter.set_data(x, y)
+        line.set_data(x, np.poly1d(np.polyfit(x, y, 1))(x))
+        ax.set(xlabel = plot[0],
+            ylabel = plot[1],
+            title = 'Red Shift: ' + str(input_snap.r_shift)
+        )
+        ax.relim()
+        ax.autoscale_view(True, True, True)
+        plt.draw()
+        fig.savefig('plots/'+str(input_snap.r_shift)+'_'+str(plot[0])+'_'+str(plot[1])+'.png')
 
 def main():
     """Main function.
@@ -112,9 +141,9 @@ def main():
     Main body which runs methods.
 
     """
-    #: list of np array: list of galaxy cluster data from input files
+    #: list of np array: list of galaxy cluster data from input files.
     input_data = read_data('dat/')
-    #: flt: test redshift value
+    #: flt: test redshift value.
     target_redshift = .0
     for target in input_data:
         if target.r_shift == target_redshift:
