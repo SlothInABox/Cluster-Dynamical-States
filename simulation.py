@@ -35,7 +35,6 @@ class ClusterSnap(object):
         self.data = data
         self.r_shift = r_shift
 
-
 def read_data(path):
     """Function to read in data.
 
@@ -94,7 +93,11 @@ def make_plots(input_snap):
         'fm' : input_snap.data[:,5],
         '$\delta$' : input_snap.data[:,4],
         '$\eta$' : input_snap.data[:,3],
-        '|$\eta$-1|' : np.abs(input_snap.data[:,3]-1)
+        '|$\eta$-1|' : np.abs(input_snap.data[:,3]-1),
+        'log(fm)' : np.log(input_snap.data[:,5]),
+        'log($\delta$)' : np.log(input_snap.data[:,4]),
+        'log($\eta$)' : np.log(input_snap.data[:,3]),
+        'log(|$\eta$-1|)' : np.log(np.abs(input_snap.data[:,3]-1))
     }
     #: list of tuples: plot values. First is x, second is y.
     plots = [
@@ -102,36 +105,23 @@ def make_plots(input_snap):
         ('$\eta$', 'fm'),
         ('$\eta$', '$\delta$'),
         ('|$\eta$-1|', 'fm'),
-        ('|$\eta$-1|', '$\delta$')
+        ('|$\eta$-1|', '$\delta$'),
+        ('log(fm)', 'log($\delta$)'),
+        ('log($\eta$)', 'log(fm)'),
+        ('log($\eta$)', 'log($\delta$)'),
+        ('log(|$\eta$-1|)', 'log(fm)'),
+        ('log(|$\eta$-1|)', 'log($\delta$)')
     ]
-    fig, ax = plt.subplots()
-    ax.set_autoscale_on(True)
-    ax.autoscale_view(True, True, True)
-    #: initialise plots. Allows use of 'set_data' later on to reduce code load.
-    scatter, = ax.plot(
-        vals['fm'],
-        vals['fm'],
-        'o',
-        c='black',
-        markersize=0.75
-    )
-    line, = ax.plot(
-        vals['fm'],
-        np.poly1d(np.polyfit(vals['fm'], vals['fm'], 1))(vals['fm']),
-        c='red',
-        alpha=0.5
-    )
-    plt.draw()
     for plot in plots:
+        fig, ax = plt.subplots()
         x, y = vals[plot[0]], vals[plot[1]]
-        scatter.set_data(x, y)
-        line.set_data(x, np.poly1d(np.polyfit(x, y, 1))(x))
-        ax.set(xlabel = plot[0],
+        ax.plot(x,y,'o',c='black',markersize=0.75)
+        ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5)
+        ax.set(
+            xlabel = plot[0],
             ylabel = plot[1],
             title = 'Red Shift: ' + str(input_snap.r_shift)
         )
-        ax.relim()
-        ax.autoscale_view(True, True, True)
         plt.draw()
         fig.savefig('plots/'+str(input_snap.r_shift)+'_'+str(plot[0])+'_'+str(plot[1])+'.png')
 
