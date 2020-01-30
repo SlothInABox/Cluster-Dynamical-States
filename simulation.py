@@ -6,7 +6,6 @@ cluster is relaxed or unrelaxed. The timescale for a galaxy to go from relaxed
 to unrelaxed can then be determined.
 
 To do:
-    *Import data from 'dat' folder.
     *Create graphs of parameters for test cluster (zero redshift).
 
 """
@@ -85,41 +84,22 @@ def read_data(path):
     print()
     return input_data
 
-def make_plots(input_snap):
+def make_plots(input_snap, plots, vals):
     """Method for making plots of a data file.
 
-    Uses a ClusterSnap object to create plots of eta against delta and fm.
-    Currently uses the R200 data columns.
-    Straight line of best fit is plotted using the numpy.polyfit function.
+    Creates a user inputted number of plots with input data columns. The data
+    points are plottered on a scatter plot. A linear line of best fit is plotted
+    using the numpy.polyfit method. The figures are saved to the 'plots/'
+    directory.
 
     Args:
-        input_snap (ClusterSnap): Object chosen for plotting.
+        input_snap (ClusterSnap): Target file object chosen for plotting.
+        plots (list of tuples): User specified plots. Each tuple contains the
+            key for the x-axis and y-axis.
+        vals (dict): Specified input data columns. Each entry consists of a
+            column name (key) and ndarray of data (value).
 
     """
-    #: dict of ndarrays: data columns with column title as the key.
-    vals = {
-        'fm' : input_snap.data[:,5],
-        '$\delta$' : input_snap.data[:,4],
-        '$\eta$' : input_snap.data[:,3],
-        '|$\eta$-1|' : np.abs(input_snap.data[:,3]-1),
-        'log(fm)' : np.log(input_snap.data[:,5]),
-        'log($\delta$)' : np.log(input_snap.data[:,4]),
-        'log($\eta$)' : np.log(input_snap.data[:,3]),
-        'log(|$\eta$-1|)' : np.log(np.abs(input_snap.data[:,3]-1))
-    }
-    #: list of tuples: plot keys. First is x, second is y.
-    plots = [
-        ('fm', '$\delta$'),
-        ('$\eta$', 'fm'),
-        ('$\eta$', '$\delta$'),
-        ('|$\eta$-1|', 'fm'),
-        ('|$\eta$-1|', '$\delta$'),
-        ('log(fm)', 'log($\delta$)'),
-        ('log($\eta$)', 'log(fm)'),
-        ('log($\eta$)', 'log($\delta$)'),
-        ('log(|$\eta$-1|)', 'log(fm)'),
-        ('log(|$\eta$-1|)', 'log($\delta$)')
-    ]
     for plot in plots:
         #: Fig, ax objects: New figure and axis created by matplotlib.
         fig, ax = plt.subplots()
@@ -150,7 +130,33 @@ def main():
     target_redshift = .0
     for target in input_data:
         if target.r_shift == target_redshift:
-            make_plots(target)
+            #: dict of ndarrays: data columns with column title as the key.
+            vals = {
+                'fm' : target.data[:,5],
+                '$\delta$' : target.data[:,4],
+                '$\eta$' : target.data[:,3],
+                '|$\eta$-1|' : np.abs(target.data[:,3]-1),
+                'log(fm)' : np.log(target.data[:,5]),
+                'log($\delta$)' : np.log(target.data[:,4]),
+                'log($\eta$)' : np.log(target.data[:,3]),
+                'log(|$\eta$-1|)' : np.log(np.abs(target.data[:,3]-1)),
+                'log(fm+$\delta$)' : np.log(target.data[:,4]+target.data[:,5])
+            }
+            #: list of tuples: plot keys. First is x, second is y.
+            plots = [
+                ('fm', '$\delta$'),
+                ('$\eta$', 'fm'),
+                ('$\eta$', '$\delta$'),
+                ('|$\eta$-1|', 'fm'),
+                ('|$\eta$-1|', '$\delta$'),
+                ('log(fm)', 'log($\delta$)'),
+                ('log($\eta$)', 'log(fm)'),
+                ('log($\eta$)', 'log($\delta$)'),
+                ('log(|$\eta$-1|)', 'log(fm)'),
+                ('log(|$\eta$-1|)', 'log($\delta$)'),
+                ('log(|$\eta$-1|)', 'log(fm+$\delta$)')
+            ]
+            make_plots(target, plots, vals)
 
 if __name__ == '__main__':
     main()
