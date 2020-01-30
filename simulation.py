@@ -116,7 +116,7 @@ def make_plots(input_snap):
         fig, ax = plt.subplots()
         x, y = vals[plot[0]], vals[plot[1]]
         ax.plot(x,y,'o',c='black',markersize=0.75)
-        ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5)
+        ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5, linewidth=0.5)
         ax.set(
             xlabel = plot[0],
             ylabel = plot[1],
