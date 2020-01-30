@@ -21,13 +21,17 @@ class ClusterSnap(object):
     This class contains the data for one input file as well as the corresponding
     redshift of the data in that file.
 
-    """
+    Attributes:
+        data (ndarray): Data from input file read in using numpy.
+        r_shift (flt): Red shift value for particular data. Calculated from
+            input file name.
 
+    """
     def __init__(self, data, r_shift):
         """Docstring on the __init__ method.
 
         Args:
-            data (np array): data inside input file.
+            data (ndarray): data inside input file.
             r_shift (flt): redshift value for the data file.
 
         """
@@ -40,6 +44,8 @@ def read_data(path):
 
     Reads in files located in the 'dat' folder. Determines redshift from the
     filename and redshifts.txt file. Stores file data in lists.
+    Any data rows which contain a NaN value or a negative value are incorrect
+    and therefore removed from the data.
 
     Args:
         path (str): The folder containing the data files.
@@ -55,7 +61,6 @@ def read_data(path):
     #:  np array: list of redshift data and snapnums.
     redshift_data = np.loadtxt('redshifts.txt', delimiter=' ')
     redshift_data[redshift_data < 0.0] = 0.0
-
     for entry in entries:
         print('---Reading: ' + entry + '---', end='\r')
         #:  int: gets snapnum from filename.
@@ -66,7 +71,10 @@ def read_data(path):
             if int(row[0]) == snap_num:
                 redshift = row[2]
         #: ClusterSnap: object containing data inside file and redshift value.
-        entry_data = ClusterSnap(np.loadtxt(path + entry, delimiter=' '), redshift)
+        entry_data = ClusterSnap(
+            np.loadtxt(path + entry, delimiter=' '),
+            redshift
+        )
         entry_data.data = entry_data.data[
             np.logical_and(
                 entry_data.data[:,1]>0.0,
@@ -99,7 +107,7 @@ def make_plots(input_snap):
         'log($\eta$)' : np.log(input_snap.data[:,3]),
         'log(|$\eta$-1|)' : np.log(np.abs(input_snap.data[:,3]-1))
     }
-    #: list of tuples: plot values. First is x, second is y.
+    #: list of tuples: plot keys. First is x, second is y.
     plots = [
         ('fm', '$\delta$'),
         ('$\eta$', 'fm'),
@@ -113,10 +121,15 @@ def make_plots(input_snap):
         ('log(|$\eta$-1|)', 'log($\delta$)')
     ]
     for plot in plots:
+        #: Fig, ax objects: New figure and axis created by matplotlib.
         fig, ax = plt.subplots()
+        #: ndarray: x and y values to be plotted.
         x, y = vals[plot[0]], vals[plot[1]]
+        #: Plot of points.
         ax.plot(x,y,'o',c='black',markersize=0.75)
+        #: Best fit line.
         ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5, linewidth=0.5)
+        #: Set x, y and title labels.
         ax.set(
             xlabel = plot[0],
             ylabel = plot[1],
