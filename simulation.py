@@ -30,8 +30,8 @@ class ClusterSnap(object):
         """Docstring on the __init__ method.
 
         Args:
-            data (ndarray): data inside input file.
-            r_shift (flt): redshift value for the data file.
+            data (ndarray): Data inside input file.
+            r_shift (flt): Redshift value for the data file.
 
         """
         super(ClusterSnap, self).__init__()
@@ -84,44 +84,45 @@ def read_data(path):
     print()
     return input_data
 
-def make_plots(input_snap, plots, vals):
+def make_plot(x, y, x_label, y_label, sup_title, filename):
     """Method for making plots of a data file.
 
-    Creates a user inputted number of plots with input data columns. The data
-    points are plottered on a scatter plot. A linear line of best fit is plotted
-    using the numpy.polyfit method. The figures are saved to the 'plots/'
-    directory.
+    Creates a plot using two columns of input data. Plots a scatter of x and y
+    points initially. Then uses the numpy.polyfits method to generate a line of
+    best fit for the data. The figure is saved to the "plots/" directory.
 
     Args:
-        input_snap (ClusterSnap): Target file object chosen for plotting.
-        plots (list of tuples): User specified plots. Each tuple contains the
-            key for the x-axis and y-axis.
-        vals (dict): Specified input data columns. Each entry consists of a
-            column name (key) and ndarray of data (value).
+        x (ndarray): x values to be plotted.
+        y (ndarray): y values to be plotted.
+        x_label (str): Label for the x-axis.
+        y_label (str): Label for the y-axis.
+        sup_title (str): Title for the figure.
+        filename (str): Filename to be stored. Do not include the file extension
+            as it is added automatically.
+
+    Returns:
+        grad (flt): Gradient of the line of best fit.
 
     """
-    for plot in plots:
-        #: Fig, ax objects: New figure and axis created by matplotlib.
-        fig, ax = plt.subplots()
-        #: ndarray: x and y values to be plotted.
-        x, y = vals[plot[0]], vals[plot[1]]
-        #: Plot of points.
-        ax.plot(x,y,'o',c='black',markersize=0.75)
-        #: Best fit line.
-        ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5, linewidth=0.5)
-        #: Set x, y and title labels.
-        ax.set(
-            xlabel = plot[0],
-            ylabel = plot[1],
-            title = 'Red Shift: ' + str(input_snap.r_shift)
-        )
-        plt.draw()
-        fig.savefig('plots/'+str(input_snap.r_shift)+'_'+str(plot[0])+'_'+str(plot[1])+'.png')
+    #: Fig, ax objects: New figure and axis created by matplotlib.
+    fig, ax = plt.subplots()
+    #: Plot of points.
+    ax.plot(x,y,'o',c='black',markersize=0.75)
+    grad, _ = np.polyfit(x, y, 1)
+    #: Best fit line.
+    ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5, linewidth=0.5)
+    #: Set x, y and title labels.
+    ax.set(
+        xlabel = x_label,
+        ylabel = y_label,
+        title = sup_title
+    )
+    plt.draw()
+    fig.savefig('plots/'+filename+'.png')
+    return grad
 
 def main():
     """Main function.
-
-    Main body which runs methods.
 
     """
     #: list of np array: list of galaxy cluster data from input files.
@@ -145,18 +146,22 @@ def main():
             #: list of tuples: plot keys. First is x, second is y.
             plots = [
                 ('fm', '$\delta$'),
-                ('$\eta$', 'fm'),
-                ('$\eta$', '$\delta$'),
-                ('|$\eta$-1|', 'fm'),
-                ('|$\eta$-1|', '$\delta$'),
-                ('log(fm)', 'log($\delta$)'),
-                ('log($\eta$)', 'log(fm)'),
-                ('log($\eta$)', 'log($\delta$)'),
-                ('log(|$\eta$-1|)', 'log(fm)'),
-                ('log(|$\eta$-1|)', 'log($\delta$)'),
-                ('log(|$\eta$-1|)', 'log(fm+$\delta$)')
             ]
-            make_plots(target, plots, vals)
+            best_corr = (0.0, 'None')
+            for plot in plots:
+                #: ndarrays: x and y values to be plotted/compared.
+                x, y = vals[plot[0]], vals[plot[1]]
+                #: flt: Pearson correlation coefficient of the two data columns.
+                corr_coef = np.corrcoef(x,y)[1,0]
+                if 1.0 - np.abs(corr_coef) < 1.0 - np.abs(best_corr[0]):
+                    best_corr = (corr_coef, plot[0] + ' : ' + plot[1])
+                #: str: title of the graph.
+                title = 'Red Shift: ' + str(target.r_shift) + ', Pearson r value: ' + str(corr_coef)
+                #: str: filename for the plot.
+                filename = str(target.r_shift) + '_' + plot[0] + '_' + plot[1]
+                #: Create a plot for the data.
+                make_plot(x, y, plot[0], plot[1], title, filename)
+            print('Best Correlation: ' + str(best_corr[0]) + ', ' + best_corr[1])
 
 if __name__ == '__main__':
     main()
