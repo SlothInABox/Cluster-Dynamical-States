@@ -100,15 +100,11 @@ def make_plot(x, y, x_label, y_label, sup_title, filename):
         filename (str): Filename to be stored. Do not include the file extension
             as it is added automatically.
 
-    Returns:
-        grad (flt): Gradient of the line of best fit.
-
     """
     #: Fig, ax objects: New figure and axis created by matplotlib.
     fig, ax = plt.subplots()
     #: Plot of points.
     ax.plot(x,y,'o',c='black',markersize=0.75)
-    grad, _ = np.polyfit(x, y, 1)
     #: Best fit line.
     ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5, linewidth=0.5)
     #: Set x, y and title labels.
@@ -119,7 +115,6 @@ def make_plot(x, y, x_label, y_label, sup_title, filename):
     )
     plt.draw()
     fig.savefig('plots/'+filename+'.png')
-    return grad
 
 def main():
     """Main function.
@@ -145,7 +140,7 @@ def main():
             }
             #: list of tuples: plot keys. First is x, second is y.
             plots = [
-                ('fm', '$\delta$'),
+                ('fm', '$\delta$')
             ]
             best_corr = (0.0, 'None')
             for plot in plots:
@@ -159,8 +154,9 @@ def main():
                 title = 'Red Shift: ' + str(target.r_shift) + ', Pearson r value: ' + str(corr_coef)
                 #: str: filename for the plot.
                 filename = str(target.r_shift) + '_' + plot[0] + '_' + plot[1]
-                #: Create a plot for the data.
+                #: flt: Gradient of line of best fit of data.
                 make_plot(x, y, plot[0], plot[1], title, filename)
+
             print('Best Correlation: ' + str(best_corr[0]) + ', ' + best_corr[1])
 
 if __name__ == '__main__':
