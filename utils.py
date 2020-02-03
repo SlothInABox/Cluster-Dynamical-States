@@ -6,6 +6,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+from scipy import optimize
+from scipy import stats
+
 class ClusterSnap(object):
     """Class containing data of object file.
 
@@ -53,11 +56,11 @@ def read_data(path):
     redshift_data = np.loadtxt('redshifts.txt', delimiter=' ')
     redshift_data[redshift_data < 0.0] = 0.0
     for entry in entries:
-        print('---Reading: ' + entry + '---', end='\r')
+        print('---Reading: {}---'.format(entry), end='\r')
         #:  int: gets snapnum from filename.
         snap_num = int(entry.split('_')[3])
         #: flt: true redshift value of the file.
-        redshift = .0
+        redshift = 0.0
         for row in redshift_data:
             if int(row[0]) == snap_num:
                 redshift = row[2]
@@ -76,34 +79,84 @@ def read_data(path):
     print()
     return input_data
 
-def make_plot(x, y, x_label, y_label, sup_title, filename):
-    """Method for making plots of a data file.
+def fit_data(x, y):
+    """Method for fitting data from a file.
 
-    Creates a plot using two columns of input data. Plots a scatter of x and y
-    points initially. Then uses the numpy.polyfits method to generate a line of
-    best fit for the data. The figure is saved to the "plots/" directory.
+    Fits data linearly using the scipy optimize.curve_fit method. Also finds the
+    Pearson correlation coefficient using the scipy stats.pearsonr method.
+    Calculates the best fit y values by passing least squares fit parameters
+    into a straight line equation.
 
     Args:
         x (ndarray): x values to be plotted.
         y (ndarray): y values to be plotted.
-        x_label (str): Label for the x-axis.
-        y_label (str): Label for the y-axis.
-        sup_title (str): Title for the figure.
-        filename (str): Filename to be stored. Do not include the file extension
-            as it is added automatically.
+
+    Returns:
+        y_calc (ndarray): Best fitted data points.
+        popt (list): Optimal values of parameters for minimizing the sum of the
+            squared residuals.
+        pcov (2d array): Estimated covariance of popt.
+        pcoef (flt): Pearson correlation coefficient.
+
+    """
+    #: Linear best fit line.
+    def line(x, m ,c):
+        return m*x+c
+    #: lists of flt: Least squares fit parameters and covariances.
+    popt, pcov = optimize.curve_fit(line, x, y)
+    #: flt: Pearson correlation coefficient from data.
+    pcoef,_ = stats.pearsonr(x,y)
+    #: ndarray: Best fitted line y values.
+    y_calc = line(x, popt[0], popt[1])
+    return y_calc, popt, pcov, pcoef
+
+def plot_data(x, y, y_calc, xlab, ylab, sup_title, filename):
+    """Method for making plots of input data.
+
+    Uses matplotlib to plot a scatter of raw data and then a linear straight
+    line of best fit on top. The plot is then saved to the plots/ directory.
+
+    Args:
+        x (ndarray): x values.
+        y (ndarray): y values.
+        y_calc (ndarray): Best fit y values.
+        xlab (str): Label for the x axis.
+        ylab (str): Label for the y axis.
+        sup_title (str): Title for the plot.
+        filename (str): Name that the plot will be stored under.
 
     """
     #: Fig, ax objects: New figure and axis created by matplotlib.
     fig, ax = plt.subplots()
     #: Plot of points.
     ax.plot(x,y,'o',c='black',markersize=0.75)
-    #: Best fit line.
-    ax.plot(x,np.poly1d(np.polyfit(x, y, 1))(x),c='red',alpha=0.5, linewidth=0.5)
-    #: Set x, y and title labels.
+    ax.plot(x, y_calc,c='red',alpha=0.5,linewidth=0.5)
     ax.set(
-        xlabel = x_label,
-        ylabel = y_label,
+        xlabel = xlab,
+        ylabel = ylab,
         title = sup_title
     )
     plt.draw()
     fig.savefig('plots/'+filename+'.png')
+
+def combine_param_lin(param1, param2, gradient, gradient_error):
+    """Method for combining two parameters.
+
+    Combines two parameters that have a linear relationship using the gradient
+    of a best fit line between the two of them as a weight.
+
+    Args:
+        param1 (ndarray): First parameter.
+        param2 (ndarray): Second parameter.
+        gradient (flt): Gradient of best fit line for param2 (y) plotted against
+            param1 (x).
+        gradient_error (flt): Uncertainty on the gradient value.
+
+    Returns:
+        combined_param (ndarray): Combined parameter.
+        combined_error (ndarray): Uncertainty on the combined parameter.
+
+    """
+    combined_param = (param2 + gradient*param1)/2.0
+    combined_error = (gradient_error/2) * (param1 + param2)
+    return combined_param, combined_error
