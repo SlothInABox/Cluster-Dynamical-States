@@ -33,26 +33,50 @@ def create_plots(vals, target):
 def create_theta(vals, target):
     """Creating the theta variable and plotting it.
 
-    Creates the theta parameter from the fm and delta parameter. Makes a plot of
-    theta against eta.
+    Creates the theta parameter from the fm and delta parameter. Makes linear
+    and log-log plots of theta against eta and |eta-1|.
+
+    Args:
+        vals (dict): Data columns.
+        target (ClusterSnap): Target data object, should be redshift 0 for
+            testing.
 
     """
     #: ndarrays: x and y values to be combined.
     x, y = vals['fm'], vals['$\delta$']
     _, popt, pcov,_ = fit_data(x,y)
     theta, theta_error = combine_param_lin(x, y, popt[0], pcov[0][0])
-    y_calc, popt, pcov, pcoef = fit_data(vals['$\eta$'], theta)
-    print('Pearson Correlation: {}'.format(pcoef))
-    print('Gradient: {} +/- {}'.format(popt[0], pcov[0][0]))
-    plot_data(
-        vals['$\eta$'],
-        theta,
-        y_calc,
-        xlab='$\eta$',
-        ylab='$\Theta$',
-        sup_title='Red Shift: {}'.format(target.r_shift),
-        filename='{}_{}_{}'.format(target.r_shift,'$\eta$','$\Theta$')
-    )
+    plots = [
+        '$\eta$',
+        '|$\eta$-1|'
+    ]
+    for plot in plots:
+        print('---Plotting: theta vs {}'.format(plot))
+        y_calc, popt, pcov, pcoef = fit_data(vals[plot], theta)
+        print('Pearson Correlation: {}'.format(pcoef))
+        print('Gradient: {} +/- {}'.format(popt[0], pcov[0][0]))
+        plot_data(
+            vals[plot],
+            theta,
+            y_calc,
+            xlab=plot,
+            ylab='$\Theta$',
+            sup_title='Red Shift: {}'.format(target.r_shift),
+            filename='{}_{}_{}'.format(target.r_shift,plot,'$\Theta$')
+        )
+        print('---Plotting: log(theta) vs log({})'.format(plot))
+        y_calc, popt, pcov, pcoef = fit_data(np.log(vals[plot]), np.log(theta))
+        print('Pearson Correlation: {}'.format(pcoef))
+        print('Gradient: {} +/- {}'.format(popt[0], pcov[0][0]))
+        plot_data(
+            np.log(vals[plot]),
+            np.log(theta),
+            y_calc,
+            xlab='log({})'.format(plot),
+            ylab='log($\Theta$)',
+            sup_title='Red Shift: {}'.format(target.r_shift),
+            filename='{}_{}_{}'.format(target.r_shift,'log({})'.format(plot),'log($\Theta$)')
+        )
 
 def main():
     """Main function.
