@@ -135,9 +135,66 @@ def plot_data(x, y, y_calc, xlab, ylab, sup_title, filename):
         xlabel = xlab,
         ylabel = ylab,
         title = sup_title
+
     )
     plt.draw()
     fig.savefig('plots/'+filename+'.png')
+
+def create_plots(vals, plots, target, log=False):
+    """For making multiple plots of various data points.
+
+    Recieves an input of tuples corresponding to data points to be plotted. Uses
+    the fit_data method to collect the correct parameters for linear best fit
+    plotting. Calls the plot_data method to plot the data.
+
+    Args:
+        vals (dict): Values from input text files.
+        plots (list): Tuples of plots. First value is the x data, second value
+            is the v data. Values correspond to keys in vals.
+        target (ClusterSnap): Target object. Only used for getting the redshift
+            at this point.
+        log (bool): Whether this should be a log-log plot. Defaults to False.
+
+    """
+    if log == False:
+        for plot in plots:
+            #: ndarrays: x and y values to be plotted/compared.
+            x, y = vals[plot[0]], vals[plot[1]]
+            #: flt: Gradient, y intercept and uncertainties of fitted data.
+            y_calc, popt, pcov, pcoef = fit_data(x, y)
+            print('Gradient: {} +/- {}'.format(popt[0], pcov[0][0]))
+            print('y-intercept: {} +/- {}'.format(popt[1], pcov[1][1]))
+            print('Pearson Correlation: {}'.format(pcoef))
+            #: Create a plot of the data.
+            plot_data(
+                x,
+                y,
+                y_calc,
+                xlab=plot[0],
+                ylab=plot[1],
+                sup_title='Red Shift: {}'.format(target.r_shift),
+                filename='{}_{}_{}'.format(target.r_shift, plot[0], plot[1])
+            )
+    elif log == True:
+        for plot in plots:
+            #: ndarrays: x and y values to be plotted/compared.
+            x, y = np.log(vals[plot[0]]), np.log(vals[plot[1]])
+            #: flt: Gradient, y intercept and uncertainties of fitted data.
+            y_calc, popt, pcov, pcoef = fit_data(x, y)
+            print('Gradient: {} +/- {}'.format(popt[0], pcov[0][0]))
+            print('y-intercept: {} +/- {}'.format(popt[1], pcov[1][1]))
+            print('Pearson Correlation: {}'.format(pcoef))
+            #: Create a plot of the data.
+            plot_data(
+                x,
+                y,
+                y_calc,
+                xlab='log({})'.format(plot[0]),
+                ylab='log({})'.format(plot[1]),
+                sup_title='Red Shift: {}'.format(target.r_shift),
+                filename='{}_log({})_log({})'.format(target.r_shift, plot[0],
+                                                     plot[1])
+            )
 
 def combine_param_lin(param1, param2, gradient, gradient_error):
     """Method for combining two parameters.
@@ -160,3 +217,13 @@ def combine_param_lin(param1, param2, gradient, gradient_error):
     combined_param = (param2 + gradient*param1)/2.0
     combined_error = (gradient_error/2) * (param1 + param2)
     return combined_param, combined_error
+
+def calc_relaxation(theta, eta):
+    """Function that calculates relaxation parameter.
+
+    Relaxation parameter, R = theta + alpha * eta. Loops through a number of
+    alpha values to create R.
+
+    """
+
+    pass
