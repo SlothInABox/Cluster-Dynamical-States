@@ -9,75 +9,56 @@ import matplotlib.pyplot as plt
 from scipy import optimize
 from scipy import stats
 
-class ClusterSnap(object):
-    """Class containing data of object file.
-
-    This class contains the data for one input file as well as the corresponding
-    redshift of the data in that file.
-
-    Attributes:
-        data (ndarray): Data from input file read in using numpy.
-        r_shift (flt): Red shift value for particular data. Calculated from
-            input file name.
-
-    """
-    def __init__(self, data, r_shift):
-        """Docstring on the __init__ method.
-
-        Args:
-            data (ndarray): Data inside input file.
-            r_shift (flt): Redshift value for the data file.
-
-        """
-        super(ClusterSnap, self).__init__()
-        self.data = data
-        self.r_shift = r_shift
-
 def read_data(path):
     """Function to read in data.
 
     Reads in files located in the 'dat' folder. Determines redshift from the
-    filename and redshifts.txt file. Stores file data in lists.
+    filename and redshifts.txt file. Stores file data in dicitonarys of
+    ndarrays.
+
     Any data rows which contain a NaN value or a negative value are incorrect
     and therefore removed from the data.
+
+    R200 and R500 data is stored in separate dictionarys. Follows following
+    format:
+        [0]: Hid
+        [1]: eta
+        [2]: delta
+        [3]: fm
 
     Args:
         path (str): The folder containing the data files.
 
     Returns:
-        input_data (list): A list of input ClusterData objects.
+        R200 (dict): R200 cluster data. Keys are the red shifts of the files.
+            Data is an ndarray containing parameters.
+        R500 (dict): R500 cluster data. Keys are the red shifts of the files.
+            Data is an ndarray containing parameters.
 
     """
-    #:  list: list of the data stored.
-    input_data = []
-    #:  list of str: files and directories in path.
+    #: list of str: Files and directories in defined path.
     entries = os.listdir(path)
     #:  np array: list of redshift data and snapnums.
-    redshift_data = np.loadtxt('redshifts.txt', delimiter=' ')
-    redshift_data[redshift_data < 0.0] = 0.0
+    rshifts = np.loadtxt('redshifts.txt', delimiter=' ')
+    #: Correct redshift data so that negative values become 0 redshift.
+    rshifts[rshifts < 0.0] = 0.0
+    #: dicts: Empty dictionarys for R200 and R500 data.
+    R200, R500 = {}, {}
     for entry in entries:
         print('---Reading: {}---'.format(entry), end='\r')
-        #:  int: gets snapnum from filename.
+        #: int: Get snapnum from filename.
         snap_num = int(entry.split('_')[3])
-        #: flt: true redshift value of the file.
-        redshift = 0.0
-        for row in redshift_data:
-            if int(row[0]) == snap_num:
-                redshift = row[2]
-        #: ClusterSnap: object containing data inside file and redshift value.
-        entry_data = ClusterSnap(
-            np.loadtxt(path + entry, delimiter=' '),
-            redshift
-        )
-        entry_data.data = entry_data.data[
-            np.logical_and(
-                entry_data.data[:,1]>0.0,
-                ~np.isnan(entry_data.data).any(axis=1)
-            )
-        ]
-        input_data.append(entry_data)
+        #: flt: Cross referenced red shift value.
+        rshift = rshifts[np.where(rshifts[:,0] == snap_num)][0][2]
+        entry_data = np.loadtxt(path + entry)
+        entry_data = entry_data[np.logical_and(
+                                               entry_data[:,1]>0.0,
+                                               ~np.isnan(entry_data).any(axis=1)
+                                               )]
+        R200[rshift] = np.copy(entry_data[:, [0, 3, 4, 5]])
+        R500[rshift] = np.copy(entry_data[:, [0, 8, 9, 10]])
     print()
-    return input_data
+    return R200, R500
 
 def fit_data(x, y):
     """Method for fitting data from a file.
@@ -140,7 +121,7 @@ def plot_data(x, y, y_calc, xlab, ylab, sup_title, filename):
     plt.draw()
     fig.savefig('plots/'+filename+'.png')
 
-def create_plots(vals, plots, target, log=False):
+def create_plots(vals, plots, rshift='NaN', log=False):
     """For making multiple plots of various data points.
 
     Recieves an input of tuples corresponding to data points to be plotted. Uses
@@ -172,8 +153,8 @@ def create_plots(vals, plots, target, log=False):
                 y_calc,
                 xlab=plot[0],
                 ylab=plot[1],
-                sup_title='Red Shift: {}'.format(target.r_shift),
-                filename='{}_{}_{}'.format(target.r_shift, plot[0], plot[1])
+                sup_title='Red Shift: {}'.format(rshift),
+                filename='{}_{}_{}'.format(rshift, plot[0], plot[1])
             )
     elif log == True:
         for plot in plots:
@@ -191,39 +172,56 @@ def create_plots(vals, plots, target, log=False):
                 y_calc,
                 xlab='log({})'.format(plot[0]),
                 ylab='log({})'.format(plot[1]),
-                sup_title='Red Shift: {}'.format(target.r_shift),
-                filename='{}_log({})_log({})'.format(target.r_shift, plot[0],
-                                                     plot[1])
+                sup_title='Red Shift: {}'.format(rshift),
+                filename='{}_log({})_log({})'.format(rshift, plot[0],plot[1])
             )
 
-def combine_param_lin(param1, param2, gradient, gradient_error):
-    """Method for combining two parameters.
+def calc_theta(fm, delta):
+    """Creating the theta variable.
 
-    Combines two parameters that have a linear relationship using the gradient
-    of a best fit line between the two of them as a weight.
+    Creates the theta parameter from the fm and delta parameter. Uses the
+    gradient of the line of best fit between the two values to weight the two
+    parameters.
 
     Args:
-        param1 (ndarray): First parameter.
-        param2 (ndarray): Second parameter.
-        gradient (flt): Gradient of best fit line for param2 (y) plotted against
-            param1 (x).
-        gradient_error (flt): Uncertainty on the gradient value.
+        fm (ndarray): Values of fm.
+        delta (ndarray): Values of delta.
 
     Returns:
-        combined_param (ndarray): Combined parameter.
-        combined_error (ndarray): Uncertainty on the combined parameter.
+        theta (ndarray): New theta data.
+        theta_err (ndarray): Uncertainty on each value of theta.
 
     """
-    combined_param = (param2 + gradient*param1)/2.0
-    combined_error = (gradient_error/2) * (param1 + param2)
-    return combined_param, combined_error
+    #: tuples: Fit data from the fm and delta plot.
+    _, popt, pcov,_ = fit_data(fm, delta)
+    theta = (delta + popt[0] * fm) / 2.0
+    theta_err = (pcov[0][0] / 2.0) * (fm + delta)
+    return theta, theta_err
 
-def calc_relaxation(theta, eta):
-    """Function that calculates relaxation parameter.
-
-    Relaxation parameter, R = theta + alpha * eta. Loops through a number of
-    alpha values to create R.
+def calc_alpha():
+    """Function that calculates an alpha value.
 
     """
-
     pass
+
+def calc_relax(theta, theta_err, eta, alpha):
+    """Function that calculates relaxation parameters.
+
+    Relaxation parameter is calculated from the following formula:
+        R = alpha * theta + |eta -1|
+    The value of alpha is decided by the input.
+
+    Args:
+        theta (ndarray): Values of theta.
+        theta_err (ndarray): Values of the uncertainty in theta values.
+        eta (ndarray): Values of eta.
+        alpha (flt): Arbitrary alpha variable defined by input.
+
+    Returns:
+        r (ndarray): Calculated relaxation parameters.
+        r_err (ndarray): Uncertainty in relaxation parameter.
+
+    """
+    r = alpha * theta + np.abs(eta - 1)
+    r_err = 0.0
+    return r, r_err
