@@ -198,17 +198,32 @@ def calc_theta(fm, delta):
     theta_err = (pcov[0][0] / 2.0) * (fm + delta)
     return theta, theta_err
 
-def calc_alpha():
+def calc_alpha(theta, eta):
     """Function that calculates an alpha value.
 
+    Generates the alpha constant that weights theta in the relaxation formula.
+    Currently, alpha is set as the gradient of the line of best fit between
+    theta and |eta - 1|.
+
+    Args:
+        theta (ndarray): Theta values.
+        eta (ndarray): Eta values.
+
+    Returns:
+        alpha (flt): Calculated alpha value.
+        alpha_err (flt): Uncertainty on alpha.
+
     """
-    pass
+    #: ndarray: |eta - 1|.
+    abs_eta = np.abs(eta - 1)
+    _,popt,pcov,_ = fit_data(abs_eta, theta)
+    return popt[0], pcov[0][0]
 
 def calc_relax(theta, theta_err, eta, alpha):
     """Function that calculates relaxation parameters.
 
     Relaxation parameter is calculated from the following formula:
-        R = alpha * theta + |eta -1|
+        R = alpha * theta + |eta - 1|
     The value of alpha is decided by the input.
 
     Args:
@@ -222,6 +237,8 @@ def calc_relax(theta, theta_err, eta, alpha):
         r_err (ndarray): Uncertainty in relaxation parameter.
 
     """
-    r = alpha * theta + np.abs(eta - 1)
-    r_err = 0.0
+    #: ndarray: Corrected eta values.
+    abs_eta = np.abs(eta - 1)
+    r = alpha * theta + abs_eta
+    r_err = np.sqrt((alpha**2) * theta_err)
     return r, r_err
