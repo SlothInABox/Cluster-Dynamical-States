@@ -240,5 +240,5 @@ def calc_relax(theta, theta_err, eta, alpha):
     #: ndarray: Corrected eta values.
     abs_eta = np.abs(eta - 1)
     r = alpha * theta + abs_eta
-    r_err = np.sqrt((alpha**2) * theta_err)
+    r_err = np.sqrt((alpha**2) * (theta_err**2))
     return r, r_err
