@@ -242,3 +242,26 @@ def calc_relax(theta, theta_err, eta, alpha):
     r = alpha * theta + abs_eta
     r_err = np.sqrt((alpha**2) * (theta_err**2))
     return r, r_err
+
+def plot_dist(data, x_label, sup_title, filename):
+    """Method for plotting the distribution of a data set.
+
+    Args:
+        data (ndarray): Data to be distributed.
+
+    """
+    #: flt: Mean value of the data.
+    mu, sigma = np.mean(data), np.std(data)
+    #: ndarray: Data resorted.
+    sorted_data = np.sort(data)
+    #: Normalised fit of the data points.
+    fit = stats.norm.pdf(sorted_data, mu, sigma)
+    fig, ax = plt.subplots()
+    ax.hist(data, bins='auto',density=True)
+    ax.plot(sorted_data, fit, 'r-', markersize=2)
+    ax.set(xlabel=x_label,
+           ylabel='Frequency',
+           title=sup_title)
+    plt.draw()
+    plt.show()
+    fig.savefig('plots/{}.png'.format(filename))
