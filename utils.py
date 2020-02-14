@@ -258,7 +258,7 @@ def plot_dist(data, x_label, sup_title, filename):
     fit = stats.norm.pdf(sorted_data, mu, sigma)
     fig, ax = plt.subplots()
     ax.hist(data, bins='auto',density=True)
-    ax.plot(sorted_data, fit, 'r-', markersize=2)
+    # ax.plot(sorted_data, fit, 'r-', markersize=2)
     ax.set(xlabel=x_label,
            ylabel='Frequency',
            title=sup_title)
