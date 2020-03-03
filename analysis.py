@@ -17,7 +17,7 @@ def main():
             settings = dict(xlabel='R', ylabel='Frequency',
                             title='Distribution of Relaxation Parameters for very low \u03B1 values')
             ax.set(**settings)
-            for alpha in np.linspace(0.0, 1, 5):
+            for alpha in np.linspace(0.0, 0.25, 5):
                 r, r_err = calc_relax(theta, theta_err, eta, alpha)
                 kde = stats.gaussian_kde(r)
                 xgrid = np.linspace(0, np.amax(r), 1000)
@@ -30,7 +30,7 @@ def main():
             ax.legend()
             plt.draw()
             plt.show()
-            fig.savefig('plots/{}.png'.format('r_distribution_vlow'))
+            fig.savefig('plots/{}.png'.format('r_distribution_vvvlow'))
 
 if __name__ == '__main__':
     main()
