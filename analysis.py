@@ -12,17 +12,25 @@ def main():
         eta, delta, fm = params[:,1], params[:,2], params[:,3]
         #: ndarrays: Theta values and uncertainties.
         theta, theta_err = calc_theta(fm, delta)
-        #: Add these columns to the ndarray.
-        params = np.concatenate([np.concatenate([params,theta[:,None]],axis=1),
-                                 theta_err[:,None]],axis=1)
-        r, r_err = calc_relax(theta, theta_err, eta, alpha=0.05)
-        params = np.concatenate([np.concatenate([params,r[:,None]],axis=1),
-                                 r_err[:,None]],axis=1)
         if rshift == 0.0:
-            #: Plot distribution of Relaxation coefficients.
-            plot_dist(r,
-                      'R','Preliminary Relaxation Distribution \n alpha = 20',
-                      'prelim_r_dist')
+            fig, ax = plt.subplots()
+            settings = dict(xlabel='R', ylabel='Frequency',
+                            title='Distribution of Relaxation Parameters for very low \u03B1 values')
+            ax.set(**settings)
+            for alpha in np.linspace(0.0, 1, 5):
+                r, r_err = calc_relax(theta, theta_err, eta, alpha)
+                kde = stats.gaussian_kde(r)
+                xgrid = np.linspace(0, np.amax(r), 1000)
+                hist, bin_edges = np.histogram(r)
+                kwargs = dict(label='\u03B1 = {}'.format(alpha),
+                              markersize=0.75, )
+                # line = ax.hist(r, **kwargs)
+                line = ax.plot(xgrid, kde(xgrid), **kwargs)
+                # ax.fill_between(xgrid, 0, kde(xgrid), alpha=0.3)
+            ax.legend()
+            plt.draw()
+            plt.show()
+            fig.savefig('plots/{}.png'.format('r_distribution_vlow'))
 
 if __name__ == '__main__':
     main()
