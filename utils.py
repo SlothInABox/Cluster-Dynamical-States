@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from scipy import optimize
 from scipy import stats
+from scipy.interpolate import make_interp_spline, BSpline
 
 def read_data(path):
     """Function to read in data.
@@ -198,27 +199,6 @@ def calc_theta(fm, delta):
     theta_err = (pcov[0][0] / 2.0) * (fm + delta)
     return theta, theta_err
 
-def calc_alpha(theta, eta):
-    """Function that calculates an alpha value.
-
-    Generates the alpha constant that weights theta in the relaxation formula.
-    Currently, alpha is set as the gradient of the line of best fit between
-    theta and |eta - 1|.
-
-    Args:
-        theta (ndarray): Theta values.
-        eta (ndarray): Eta values.
-
-    Returns:
-        alpha (flt): Calculated alpha value.
-        alpha_err (flt): Uncertainty on alpha.
-
-    """
-    #: ndarray: |eta - 1|.
-    abs_eta = np.abs(eta - 1)
-    _,popt,pcov,_ = fit_data(abs_eta, theta)
-    return popt[0], pcov[0][0]
-
 def calc_relax(theta, theta_err, eta, alpha):
     """Function that calculates relaxation parameters.
 
@@ -243,25 +223,18 @@ def calc_relax(theta, theta_err, eta, alpha):
     r_err = np.sqrt((alpha**2) * (theta_err**2))
     return r, r_err
 
-def plot_dist(data, x_label, sup_title, filename):
-    """Method for plotting the distribution of a data set.
+def plot_distribution(ax, data, data_settings):
+    """Method for plotting a distribution of a data set.
+
+    Performs a kernel density estimation on the data and outputs to specific
+    plot.
 
     Args:
+        ax (axis): Axis for data to be plotted on.
         data (ndarray): Data to be distributed.
+        data_settings (dict): Settings for the plotted points.
 
     """
-    #: flt: Mean value of the data.
-    mu, sigma = np.mean(data), np.std(data)
-    #: ndarray: Data resorted.
-    sorted_data = np.sort(data)
-    #: Normalised fit of the data points.
-    fit = stats.norm.pdf(sorted_data, mu, sigma)
-    fig, ax = plt.subplots()
-    ax.hist(data, bins='auto',density=True)
-    # ax.plot(sorted_data, fit, 'r-', markersize=2)
-    ax.set(xlabel=x_label,
-           ylabel='Frequency',
-           title=sup_title)
-    plt.draw()
-    plt.show()
-    fig.savefig('plots/{}.png'.format(filename))
+    kde = stats.gaussian_kde(data)
+    xgrid = np.linspace(0, np.amax(data), 1000)
+    line = ax.plot(xgrid, kde(xgrid), **data_settings)
