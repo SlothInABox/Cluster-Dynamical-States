@@ -3,6 +3,19 @@
 """
 from utils import *
 
+def eta_distribution(eta):
+    abs_eta = np.abs(eta - 1)
+
+    fig, ax = plt.subplots()
+    settings = dict(xlabel='$|\eta-1|$', ylabel='Frequency',
+                    title='Distribution of $|\eta-1|$ for redshift 0.0')
+    ax.set(**settings)
+    kwargs = dict(markersize=0.75)
+    plot_distribution(ax, abs_eta, kwargs)
+    plt.draw()
+    fig.savefig('plots/{}.png'.format('eta_dsitribution'))
+    plt.show()
+
 def theta_distribution(theta):
     fig, ax = plt.subplots()
     settings = dict(xlabel='$\Theta$', ylabel='Frequency',
@@ -72,10 +85,11 @@ def relaxation_galaxy(R200):
     #: Turn into numpy array for easier access.
     relaxation_cols = np.array(relaxation_cols)
     rshifts, r_params, r_errs = relaxation_cols[:,0], relaxation_cols[:,1], relaxation_cols[:,2]
+
     #: Plot a graph of relaxation as a function of reshift.
     fig, ax = plt.subplots()
-    point_settings = dict(fmt='o', markersize=2, linestyle='None')
-    line_settings = dict(markersize=0.75, color='red')
+    point_settings = dict(fmt='o', markersize=2, linestyle='None', color='black')
+    line_settings = dict(markersize=0.75)
     points = ax.errorbar(rshifts, r_params,yerr=r_errs, **point_settings)
     xgrid = np.linspace(np.amin(rshifts), np.amax(rshifts), 10000)
     spl = make_interp_spline(rshifts, r_params, k=3)
@@ -92,8 +106,9 @@ def relaxation_galaxy(R200):
 def main():
     #: dicts: Dictionarys of the R200 and R500 data.
     R200, R500 = read_data('dat/')
-    relaxation_galaxy(R200)
-
+    # relaxation_galaxy(R200)
+    eta = R200[0.0][:,1]
+    eta_distribution(eta)
 
 if __name__ == '__main__':
     main()
