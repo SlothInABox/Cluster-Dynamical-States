@@ -254,3 +254,32 @@ def get_peak(kde, xgrid):
     """
     idx = np.where(kde(xgrid) == np.amax(kde(xgrid)))[0]
     return(xgrid[idx][0])
+
+def calc_r(theta, theta_err, eta):
+    """Function for calculating the relaxation parameter.
+    
+    Uses alpha and beta values found through previous analysis.
+    
+    Calculates r using the following equation:
+        r = alpha * theta + beta * |eta - 1|
+    
+    Args:
+        theta (ndarray): Theta values.
+        theta_err (ndarray): Uncertainties on theta values.
+        eta (ndarray): Values of eta.
+    
+    Returns:
+        r (ndarray): Relaxation parameter.
+        r_err (ndarray): Uncertainty on relaxation parameter.
+    
+    """
+    #: flts: Define alpha and beta.
+    alpha, beta = 1.9302609799355779, 0.6372871643751887
+    #: ndarray: Corrected eta values.
+    abs_eta = np.abs(eta - 1)
+    
+    #: ndarray: Relaxation parameter.
+    r = alpha * theta + beta * abs_eta
+    #: ndarray: Uncertainty on relaxation parameter.
+    r_err = np.sqrt((alpha**2) * (theta_err**2))
+    return(r, r_err)
