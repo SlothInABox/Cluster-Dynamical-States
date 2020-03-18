@@ -3,8 +3,11 @@
 """
 
 import os
+
 import numpy as np
+
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
 from scipy import optimize
 from scipy import stats
@@ -59,7 +62,7 @@ def read_data(path):
         R200[rshift] = np.copy(entry_data[:, [0, 3, 4, 5]])
         R500[rshift] = np.copy(entry_data[:, [0, 8, 9, 10]])
     print()
-    return R200, R500
+    return(R200, R500)
 
 def fit_data(x, y):
     """Method for fitting data from a file.
@@ -90,7 +93,7 @@ def fit_data(x, y):
     pcoef,_ = stats.pearsonr(x,y)
     #: ndarray: Best fitted line y values.
     y_calc = line(x, popt[0], popt[1])
-    return y_calc, popt, pcov, pcoef
+    return(y_calc, popt, pcov, pcoef)
 
 def plot_data(x, y, y_calc, xlab, ylab, sup_title, filename):
     """Method for making plots of input data.
@@ -197,7 +200,7 @@ def calc_theta(fm, delta):
     _, popt, pcov,_ = fit_data(fm, delta)
     theta = (delta + popt[0] * fm) / 2.0
     theta_err = (pcov[0][0] / 2.0) * (fm + delta)
-    return theta, theta_err
+    return(theta, theta_err)
 
 def calc_relax(theta, theta_err, eta, alpha):
     """Function that calculates relaxation parameters.
@@ -221,7 +224,7 @@ def calc_relax(theta, theta_err, eta, alpha):
     abs_eta = np.abs(eta - 1)
     r = alpha * theta + abs_eta
     r_err = np.sqrt((alpha**2) * (theta_err**2))
-    return r, r_err
+    return(r, r_err)
 
 def get_distribution(data):
     """Method for getting the distribution of a data set.
@@ -283,3 +286,32 @@ def calc_r(theta, theta_err, eta):
     #: ndarray: Uncertainty on relaxation parameter.
     r_err = np.sqrt((alpha**2) * (theta_err**2))
     return(r, r_err)
+
+def multiline(xs, ys, c, ax=None, **kwargs):
+    """Plot lines with different colourings.
+    
+    Args:
+        xs (ndarray): Container of x coordinates.
+        ys (ndarray): Container of y coordinates.
+        c (ndarray): Container of numbers mapped to colormap.
+        ax (ax obj): Optional axis to plot on.
+        kwargs (dict): Passed to LineCollection as settings.
+        
+    Returns:
+        lc (obj): Line collection instance.
+    
+    """
+    # find axes
+    ax = plt.gca() if ax is None else ax
+
+    # create LineCollection
+    segments = [np.column_stack([x, y]) for x, y in zip(xs, ys)]
+    lc = LineCollection(segments, **kwargs)
+
+    # set coloring of line segments
+    lc.set_array(np.asarray(c))
+
+    # add lines to axes and rescale 
+    ax.add_collection(lc)
+    ax.autoscale()
+    return(lc)
