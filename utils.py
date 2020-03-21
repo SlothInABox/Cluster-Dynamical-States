@@ -315,3 +315,20 @@ def multiline(xs, ys, c, ax=None, **kwargs):
     ax.add_collection(lc)
     ax.autoscale()
     return(lc)
+
+def spline(x, y):
+    """Make a curved line through data points.
+    
+    Args:
+        x (ndarray): x values.
+        y (ndarray): y values.
+        
+    Returns:
+        xgrid (ndarray): Grid of new x values.
+        power_smooth (ndarray): New smoothed y values.
+    
+    """
+    xgrid = np.linspace(np.amin(x), np.amax(x), 10000)
+    spl = make_interp_spline(x, y, k=3)
+    power_smooth = spl(xgrid)
+    return(xgrid, power_smooth)
