@@ -12,6 +12,7 @@ from matplotlib.collections import LineCollection
 from scipy import optimize
 from scipy import stats
 from scipy.interpolate import make_interp_spline, BSpline
+from scipy.signal import find_peaks
 
 def read_data(path):
     """Function to read in data.
@@ -196,10 +197,14 @@ def calc_theta(fm, delta):
         theta_err (ndarray): Uncertainty on each value of theta.
 
     """
-    #: tuples: Fit data from the fm and delta plot.
-    _, popt, pcov,_ = fit_data(fm, delta)
-    theta = (delta + popt[0] * fm) / 2.0
-    theta_err = (pcov[0][0] / 2.0) * (fm + delta)
+    #: flts: Gradient weight factor and gradient weight uncertainty.
+    m, m_err = 0.6032231653176229, 0.02965931345715287
+#     _, popt, pcov,_ = fit_data(fm, delta)
+#     m, m_err = popt[0], np.sqrt(pcov[0][0])
+    #: ndarray: Values of theta using the gradient weight.
+    theta = (delta + m * fm) / 2.0
+    #: ndarray: Values of the uncertainty of theta.
+    theta_err = (m_err / 2.0) * (fm + delta)
     return(theta, theta_err)
 
 def calc_relax(theta, theta_err, eta, alpha):
@@ -277,7 +282,7 @@ def calc_r(theta, theta_err, eta):
     
     """
     #: flts: Define alpha and beta.
-    alpha, beta = 1.9302609799355779, 0.6372871643751887
+    alpha, beta = 1.6627686164856927, 0.726861155916784
     #: ndarray: Corrected eta values.
     abs_eta = np.abs(eta - 1)
     
