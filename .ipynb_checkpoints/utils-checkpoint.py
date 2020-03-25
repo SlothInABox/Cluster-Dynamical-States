@@ -282,7 +282,7 @@ def calc_r(theta, theta_err, eta):
     
     """
     #: flts: Define alpha and beta.
-    alpha, beta = 1.6627686164856927, 0.726861155916784
+    alpha, beta = 1.5988696706651493, 0.7037942890537529
     #: ndarray: Corrected eta values.
     abs_eta = np.abs(eta - 1)
     
