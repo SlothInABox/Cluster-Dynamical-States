@@ -96,91 +96,6 @@ def fit_data(x, y):
     y_calc = line(x, popt[0], popt[1])
     return(y_calc, popt, pcov, pcoef)
 
-def plot_data(x, y, y_calc, xlab, ylab, sup_title, filename):
-    """Method for making plots of input data.
-
-    Uses matplotlib to plot a scatter of raw data and then a linear straight
-    line of best fit on top. The plot is then saved to the plots/ directory.
-
-    Args:
-        x (ndarray): x values.
-        y (ndarray): y values.
-        y_calc (ndarray): Best fit y values.
-        xlab (str): Label for the x axis.
-        ylab (str): Label for the y axis.
-        sup_title (str): Title for the plot.
-        filename (str): Name that the plot will be stored under.
-
-    """
-    #: Fig, ax objects: New figure and axis created by matplotlib.
-    fig, ax = plt.subplots()
-    #: Plot of points.
-    ax.plot(x,y,'o',c='black',markersize=0.75)
-    ax.plot(x, y_calc,c='red',alpha=0.5,linewidth=0.5)
-    ax.set(
-        xlabel = xlab,
-        ylabel = ylab,
-        title = sup_title
-
-    )
-    plt.draw()
-    fig.savefig('plots/'+filename+'.png')
-
-def create_plots(vals, plots, rshift='NaN', log=False):
-    """For making multiple plots of various data points.
-
-    Recieves an input of tuples corresponding to data points to be plotted. Uses
-    the fit_data method to collect the correct parameters for linear best fit
-    plotting. Calls the plot_data method to plot the data.
-
-    Args:
-        vals (dict): Values from input text files.
-        plots (list): Tuples of plots. First value is the x data, second value
-            is the v data. Values correspond to keys in vals.
-        target (ClusterSnap): Target object. Only used for getting the redshift
-            at this point.
-        log (bool): Whether this should be a log-log plot. Defaults to False.
-
-    """
-    if log == False:
-        for plot in plots:
-            #: ndarrays: x and y values to be plotted/compared.
-            x, y = vals[plot[0]], vals[plot[1]]
-            #: flt: Gradient, y intercept and uncertainties of fitted data.
-            y_calc, popt, pcov, pcoef = fit_data(x, y)
-            print('Gradient: {} +/- {}'.format(popt[0], pcov[0][0]))
-            print('y-intercept: {} +/- {}'.format(popt[1], pcov[1][1]))
-            print('Pearson Correlation: {}'.format(pcoef))
-            #: Create a plot of the data.
-            plot_data(
-                x,
-                y,
-                y_calc,
-                xlab=plot[0],
-                ylab=plot[1],
-                sup_title='Red Shift: {}'.format(rshift),
-                filename='{}_{}_{}'.format(rshift, plot[0], plot[1])
-            )
-    elif log == True:
-        for plot in plots:
-            #: ndarrays: x and y values to be plotted/compared.
-            x, y = np.log(vals[plot[0]]), np.log(vals[plot[1]])
-            #: flt: Gradient, y intercept and uncertainties of fitted data.
-            y_calc, popt, pcov, pcoef = fit_data(x, y)
-            print('Gradient: {} +/- {}'.format(popt[0], pcov[0][0]))
-            print('y-intercept: {} +/- {}'.format(popt[1], pcov[1][1]))
-            print('Pearson Correlation: {}'.format(pcoef))
-            #: Create a plot of the data.
-            plot_data(
-                x,
-                y,
-                y_calc,
-                xlab='log({})'.format(plot[0]),
-                ylab='log({})'.format(plot[1]),
-                sup_title='Red Shift: {}'.format(rshift),
-                filename='{}_log({})_log({})'.format(rshift, plot[0],plot[1])
-            )
-
 def calc_theta(fm, delta):
     """Creating the theta variable.
 
@@ -207,30 +122,6 @@ def calc_theta(fm, delta):
     theta_err = (m_err / 2.0) * (fm + delta)
     return(theta, theta_err)
 
-def calc_relax(theta, theta_err, eta, alpha):
-    """Function that calculates relaxation parameters.
-
-    Relaxation parameter is calculated from the following formula:
-        R = alpha * theta + |eta - 1|
-    The value of alpha is decided by the input.
-
-    Args:
-        theta (ndarray): Values of theta.
-        theta_err (ndarray): Values of the uncertainty in theta values.
-        eta (ndarray): Values of eta.
-        alpha (flt): Arbitrary alpha variable defined by input.
-
-    Returns:
-        r (ndarray): Calculated relaxation parameters.
-        r_err (ndarray): Uncertainty in relaxation parameter.
-
-    """
-    #: ndarray: Corrected eta values.
-    abs_eta = np.abs(eta - 1)
-    r = alpha * theta + abs_eta
-    r_err = np.sqrt((alpha**2) * (theta_err**2))
-    return(r, r_err)
-
 def get_distribution(data):
     """Method for getting the distribution of a data set.
     
@@ -246,22 +137,6 @@ def get_distribution(data):
     kde = stats.gaussian_kde(data)
     xgrid = np.linspace(0, np.amax(data), 1000)
     return(kde, xgrid)
-
-def get_peak(kde, xgrid):
-    """Function to get the highest peak value of a distribution.
-    
-    Gets the highest peak value of a distribution.
-    
-    Args:
-        kde (kde object): Equation describing KDE.
-        xgrid (ndarray): x-values passed into KDE.
-    
-    Returns:
-        peak (flt): Peak value.
-    
-    """
-    idx = np.where(kde(xgrid) == np.amax(kde(xgrid)))[0]
-    return(xgrid[idx][0])
 
 def calc_r(theta, theta_err, eta):
     """Function for calculating the relaxation parameter.
@@ -337,3 +212,36 @@ def spline(x, y):
     spl = make_interp_spline(x, y, k=3)
     power_smooth = spl(xgrid)
     return(xgrid, power_smooth)
+
+def track_relaxation(cluster_idx, data):
+    """Function for tracking the relaxation of a cluster.
+    
+    Args:
+        cluster_idx (int): Index of the target cluster.
+        data (dict): Contains parameter data. Keys are redshifts, values
+            are ndarrays containing parameter data.
+            
+    Returns:
+        r (ndarray): Relaxation parameters for the cluster.
+        r_err (ndarray): Uncertainty in relaxation.
+        rshifts (ndarray): Corresponding redshift values.
+    
+    """
+    #: list: Stores relaxation values.
+    r_cols = []
+    
+    for rshift in sorted(data.keys()):
+        #: flts: Parameters for calculating theta and relaxation.
+        eta, delta, fm = data[rshift][cluster_idx,1], data[rshift][cluster_idx,2], data[rshift][cluster_idx,3]
+        
+        #: flts: Calculated theta and uncertainty.
+        theta, theta_err = calc_theta(fm, delta)
+        #: flts: Calculated r and uncertainty.
+        r, r_err = calc_r(theta, theta_err, eta)
+        r_cols.append([r, r_err, rshift])
+        
+    #: ndarray: Convert r_cols into ndarray.
+    r_cols = np.array(r_cols)
+    #: ndarrays: Point to new parameters.
+    r, r_err, rshift = r_cols[:,0], r_cols[:,1], r_cols[:,2]
+    return(r, r_err, rshift)
