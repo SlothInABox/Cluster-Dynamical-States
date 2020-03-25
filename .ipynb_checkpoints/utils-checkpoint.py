@@ -57,8 +57,8 @@ def read_data(path):
         rshift = rshifts[np.where(rshifts[:,0] == snap_num)][0][2]
         entry_data = np.loadtxt(path + entry)
         entry_data = entry_data[np.logical_and(
-                                               entry_data[:,1]>0.0,
-                                               ~np.isnan(entry_data).any(axis=1)
+                                               ~np.isnan(entry_data).any(axis=1),
+                                               np.all(entry_data >= 0, axis=1)
                                                )]
         R200[rshift] = np.copy(entry_data[:, [0, 3, 4, 5]])
         R500[rshift] = np.copy(entry_data[:, [0, 8, 9, 10]])
