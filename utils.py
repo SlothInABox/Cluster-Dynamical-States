@@ -56,8 +56,12 @@ def read_data(path):
                 clusters[cluster[0]] = []
             clusters[cluster[0]].append([cluster[3], cluster[4], cluster[5], rshift])
     print()
-    for idx in clusters.keys():
-        clusters[idx] = np.array(clusters[idx])
+    for key in clusters.keys():
+        cluster = clusters[key]
+        cluster = np.array(cluster)
+        #: Sort clusters so rshifts are ordered.
+        cluster = cluster[cluster[:,3].argsort()]
+        clusters[key] = cluster
     rshifts = np.copy(rshifts[:,2])[::-1]
     return(clusters, rshifts)
 
@@ -76,7 +80,7 @@ def pull_rshift_set(cluster_data, rshift):
     """
     #: list: Store eta, delta, and fm values.
     eta, delta, fm = [], [], []
-    # Iterate over the cluster.
+    # Iterate over the clusters.
     for _, cluster in cluster_data.items():
         #: ndarray: Select only correct rshift data.
         data = cluster[cluster[:,3] == rshift]
@@ -254,8 +258,6 @@ def track_relaxation(cluster_data, cluster_idx):
     """
     cluster = cluster_data[cluster_idx]
     eta, delta, fm, rshift = cluster[:,0], cluster[:,1], cluster[:,2], cluster[:,3]
-    rshift_idx = rshift.argsort()
-    eta, delta, fm, rshift = eta[rshift_idx], delta[rshift_idx], fm[rshift_idx], rshift[rshift_idx]
 
     # Calculate theta.
     theta, theta_err = calc_theta(fm, delta)
@@ -337,3 +339,25 @@ def lookback_time(z):
     Ho = 72
     t = (2/(3*Ho)) * (1 - 1/((1+z)**(3/2)))
     return(t)
+
+def read_mass_data(filename):
+    """Method for reading mass data from a file.
+    
+    Args:
+        filename (str): Name (and path) of the file. Requires extension.
+        
+    Returns:
+        mass_data (dict): Mass history of every cluster. Keys are cluster rIDs.
+    
+    """
+    #: dict: Store mass data.
+    mass_data = {}
+    #: ndarray: Read in the mass data from the file.
+    mass_file = np.loadtxt(filename, delimiter=' ')
+    #: Iterate over mass file to get each cluster history.
+    for cluster in mass_file:
+        #: Replace negative mass values with 0.
+        cluster[1:][cluster[1:] < 0] = 0
+        #: Add cluster history to dictionary.
+        mass_data[cluster[0]] = np.flip(cluster[1:])
+    return(mass_data)
