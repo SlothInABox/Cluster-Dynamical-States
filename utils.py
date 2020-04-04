@@ -11,7 +11,7 @@ from matplotlib.collections import LineCollection
 
 from scipy import optimize
 from scipy import stats
-from scipy.interpolate import make_interp_spline, BSpline
+from scipy import interpolate
 from scipy.signal import find_peaks
 
 def read_data(path):
@@ -28,41 +28,74 @@ def read_data(path):
         clusters (dict): Dict of ndarrays containing data for each cluster.
     
     """
-    #: list of str: Files and directories in path.
-    entries = os.listdir(path)
-    
     #: ndarray: Redshift data and snapnums.
     rshifts = np.loadtxt('redshifts.txt', delimiter=' ')
     #: Correct redshift data so that negative values become 0 redshift.
-    rshifts[rshifts < 0.0] = 0.0
-    
-    #: dict: Empty dictionary for cluster data.
+    rshifts[:,2][rshifts[:,2] < 0.0] = 0.0
+
+    #: dict: Empty for storing cluster information.
     clusters = {}
-    for entry in entries:
+    for entry in os.listdir(path):
+        #: str: location of file.
+        subpath = os.path.join(path, entry)
+        if os.path.isdir(subpath):
+            #: Skip if not a file.
+            continue
         print('---Reading: {}---'.format(entry), end='\r')
         #: int: Get snapnum from filename.
         snapnum = int(entry.split('_')[3])
-        #: flt: Cross reference rshift value.
-        rshift = rshifts[np.where(rshifts[:,0] == snapnum)][0][2]
-        #: ndarray: Loaded data.
+        #: flt: Get corresponding rshift from reference file.
+        rshift = rshifts[np.where(rshifts[:,0] == snapnum)[0]][0][2]
+        #: ndarray: Load data from the file.
         entry_data = np.loadtxt(path + entry)
+        #: Select only the necessary columns (id, eta, fm, delta).
+        entry_data = entry_data[:, [0, 3, 4, 5]]
         #: Remove invalid data.
         entry_data = entry_data[np.logical_and(
                                                ~np.isnan(entry_data).any(axis=1),
-                                               np.all(entry_data >= 0, axis=1)
-                                               )]
+                                               np.all(entry_data >= 0, axis=1))]
+
+        #: Iterate over the clusters in the file.
         for cluster in entry_data:
             if clusters.get(cluster[0]) == None:
+                #: Make a new entry in the dictionary.
                 clusters[cluster[0]] = []
-            clusters[cluster[0]].append([cluster[3], cluster[4], cluster[5], rshift])
+            #: Add data to list.
+            clusters[cluster[0]].append([cluster[1], cluster[2], cluster[3], rshift])
     print()
-    for key in clusters.keys():
-        cluster = clusters[key]
+    for key, cluster in clusters.items():
+        #: ndarray: Convert cluster to ndarray.
         cluster = np.array(cluster)
-        #: Sort clusters so rshifts are ordered.
+        #: Sort data by redshift.
         cluster = cluster[cluster[:,3].argsort()]
         clusters[key] = cluster
-    rshifts = np.copy(rshifts[:,2])[::-1]
+
+    #: ndarray: Read in mass history data
+    masses = np.loadtxt('G3X-Central-Masses-for-M200.txt', delimiter=' ')
+
+    #: Select range of redshifts.
+    rshifts = rshifts[:,2][1:]
+    for key, cluster in clusters.items():
+        #: int: Locate the index of the corresponding cluster.
+        idx = np.where(masses[:,0] == key)[0]
+        #: ndarray: Select mass history of cluster.
+        mass_hist = masses[idx][0][1:]
+        #: ndarray: Create double column of mass history and redshift.
+        mass_hist = np.column_stack((mass_hist, rshifts))
+        #: list: Empty list for storing cluster mass histories.
+        cluster_mass_hist = []
+        for snap in cluster:
+            #: flt: Redshift pointer.
+            rshift = snap[3]
+            #: int: find correct mass value for rshift.
+            idx = np.where(mass_hist[:,1] == rshift)[0]
+            #: Add to list
+            cluster_mass_hist.append(mass_hist[idx][0][0])
+        #: Convert to array.
+        cluster_mass_hist = np.array(cluster_mass_hist)
+        #: Add as column to existing array.
+        cluster = np.column_stack((cluster, cluster_mass_hist))
+        clusters[key] = cluster
     return(clusters, rshifts)
 
 def pull_rshift_set(cluster_data, rshift):
@@ -187,7 +220,7 @@ def calc_r(theta, theta_err, eta):
     
     """
     #: flts: Define alpha and beta.
-    alpha, beta = 1.5988696706651493, 0.7037942890537529
+    alpha, beta = 1.5783445063587698, 0.7318368559637508
     #: ndarray: Corrected eta values.
     abs_eta = np.abs(eta - 1)
     
@@ -234,14 +267,20 @@ def spline(x, y):
         y (ndarray): y values.
         
     Returns:
-        xgrid (ndarray): Grid of new x values.
-        power_smooth (ndarray): New smoothed y values.
+        xnew (ndarray): Grid of new x values.
+        ynew (ndarray): New interpolated y values.
+        yder (ndarray): New derivative y values.
     
     """
-    xgrid = np.linspace(np.amin(x), np.amax(x), 10000)
-    spl = make_interp_spline(x, y, k=3)
-    power_smooth = spl(xgrid)
-    return(xgrid, power_smooth)
+    #: Spline representation of curve in 2D space.
+    tck = interpolate.splrep(x, y, s=0)
+    #: ndarray: Array of new x-values.
+    xnew = np.linspace(np.amin(x), np.amax(x), 10000)
+    #: ndarray: New interpolated y values.
+    ynew = interpolate.splev(xnew, tck, der=0)
+    #: ndarray: New y derviative values.
+    yder = interpolate.splev(xnew, tck, der=1)
+    return(xnew, ynew, yder)
 
 def track_relaxation(cluster_data, cluster_idx):
     """Function for tracking the relaxation of a cluster.
@@ -339,25 +378,3 @@ def lookback_time(z):
     Ho = 72
     t = (2/(3*Ho)) * (1 - 1/((1+z)**(3/2)))
     return(t)
-
-def read_mass_data(filename):
-    """Method for reading mass data from a file.
-    
-    Args:
-        filename (str): Name (and path) of the file. Requires extension.
-        
-    Returns:
-        mass_data (dict): Mass history of every cluster. Keys are cluster rIDs.
-    
-    """
-    #: dict: Store mass data.
-    mass_data = {}
-    #: ndarray: Read in the mass data from the file.
-    mass_file = np.loadtxt(filename, delimiter=' ')
-    #: Iterate over mass file to get each cluster history.
-    for cluster in mass_file:
-        #: Replace negative mass values with 0.
-        cluster[1:][cluster[1:] < 0] = 0
-        #: Add cluster history to dictionary.
-        mass_data[cluster[0]] = np.flip(cluster[1:])
-    return(mass_data)
